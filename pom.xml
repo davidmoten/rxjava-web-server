@@ -4,17 +4,14 @@
   <artifactId>rxjava-web-server</artifactId>
   <version>0.0.1-SNAPSHOT</version>
   <name>${project.artifactId}</name>
+  <properties>
+    <rxjava.version>0.18.3</rxjava.version>
+  </properties>
   <dependencies>
-      
-      <dependency>
-          <groupId>com.netflix.rxjava</groupId>
-          <artifactId>rxjava-core</artifactId>
-          <version>0.18.3</version>
-      </dependency>
       <dependency>
           <groupId>com.netflix.rxjava</groupId>
           <artifactId>rxjava-string</artifactId>
-          <version>0.18.3</version>
+          <version>${rxjava.version}</version>
       </dependency>
   </dependencies>
 </project>
