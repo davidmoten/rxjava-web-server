@@ -1,5 +1,7 @@
 package com.github.davidmoten.rx.web;
 
+import static rx.Observable.using;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
@@ -15,18 +17,18 @@ import rx.Subscriber;
 import rx.Subscription;
 import rx.functions.Action0;
 import rx.functions.Action1;
+import rx.functions.Func0;
 import rx.functions.Func1;
 import rx.observables.StringObservable;
 import rx.schedulers.Schedulers;
 import rx.subscriptions.Subscriptions;
 
-public class ServerSocketObservable {
+public final class ServerObservable {
 
 	public static Observable<Socket> from(final int port) {
 		return Observable.create(new OnSubscribe<Socket>() {
 
 			public void call(Subscriber<? super Socket> subscriber) {
-				// TODO use Observable.using()?
 				try {
 					final ServerSocket serverSocket = new ServerSocket(port);
 					Subscription closeServerSocket = closingSubscription(serverSocket);
@@ -69,28 +71,72 @@ public class ServerSocketObservable {
 				try {
 					Observable<byte[]> bytes = StringObservable.from(socket
 							.getInputStream());
-					Observable<String> decoded = StringObservable.decode(bytes,
-							StandardCharsets.UTF_8);
-					return StringObservable
-					// split by line feed
-							.split(decoded, "\n")
-							// stop when encounter blank line
-							.takeWhile(NON_BLANK)
-							// aggregate lines as list
-							.toList()
-							// parse the lines as a request
-							.map(TO_REQUEST)
-							// process the request
-							.doOnNext(process(socket))
-							// close the socket when complete
-							// TODO use Using()
-							.doOnCompleted(close(socket));
+					final Observable<String> decoded = StringObservable.decode(
+							bytes, StandardCharsets.UTF_8);
+					Func1<SocketSubscription, Observable<Request>> obs = new Func1<SocketSubscription, Observable<Request>>() {
+
+						public Observable<Request> call(SocketSubscription t1) {
+							return StringObservable
+							// split by line feed
+									.split(decoded, "\n")
+									// stop when encounter blank line
+									.takeWhile(NON_BLANK)
+									// aggregate lines as list
+									.toList()
+									// parse the lines as a request
+									.map(TO_REQUEST)
+									// process the request
+									.doOnNext(process(socket));
+						}
+					};
+					return using(new SocketSubscriptionFactory(socket), obs);
 				} catch (IOException e) {
 					return Observable.error(e);
 				}
 			}
-
 		});
+	}
+
+	private static class SocketSubscriptionFactory implements
+			Func0<SocketSubscription> {
+
+		private final SocketSubscription sub;
+
+		SocketSubscriptionFactory(Socket socket) {
+			this.sub = new SocketSubscription(socket);
+		}
+
+		public SocketSubscription call() {
+			return sub;
+		}
+
+	}
+
+	private static class SocketSubscription implements Subscription {
+
+		private final Subscription inner;
+
+		SocketSubscription(final Socket socket) {
+			inner = Subscriptions.create(new Action0() {
+
+				public void call() {
+					try {
+						socket.close();
+					} catch (IOException e) {
+						// ignore
+					}
+				}
+			});
+		}
+
+		public void unsubscribe() {
+			inner.unsubscribe();
+		}
+
+		public boolean isUnsubscribed() {
+			return inner.isUnsubscribed();
+		}
+
 	}
 
 	private static Action1<Request> process(final Socket socket) {
@@ -104,20 +150,6 @@ public class ServerSocketObservable {
 					out.print("\r\n");
 					out.print("Got the message " + new Date());
 					out.close();
-				} catch (IOException e) {
-					throw new RuntimeException(e);
-				}
-			}
-		};
-	}
-
-	private static Action0 close(final Socket socket) {
-		return new Action0() {
-
-			public void call() {
-				try {
-					socket.close();
-					System.out.println("-- closed socket");
 				} catch (IOException e) {
 					throw new RuntimeException(e);
 				}
