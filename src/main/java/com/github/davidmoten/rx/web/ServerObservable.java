@@ -72,22 +72,8 @@ public final class ServerObservable {
 							.getInputStream());
 					final Observable<String> decoded = StringObservable.decode(
 							bytes, StandardCharsets.UTF_8);
-					Func1<SocketSubscription, Observable<Request>> factory = new Func1<SocketSubscription, Observable<Request>>() {
-
-						public Observable<Request> call(SocketSubscription t1) {
-							return StringObservable
-							// split by line feed
-									.split(decoded, "\n")
-									// stop when encounter blank line
-									.takeWhile(NON_BLANK)
-									// aggregate lines as list
-									.toList()
-									// parse the lines as a request
-									.map(TO_REQUEST)
-									// process the request
-									.doOnNext(process(socket));
-						}
-					};
+					Func1<SocketSubscription, Observable<Request>> factory = requestFactory(
+							socket, decoded);
 					SocketSubscriptionFactory subscriptionFactory = new SocketSubscriptionFactory(
 							socket);
 					return using(subscriptionFactory, factory);
@@ -95,7 +81,28 @@ public final class ServerObservable {
 					return Observable.error(e);
 				}
 			}
+
 		});
+	}
+
+	private static Func1<SocketSubscription, Observable<Request>> requestFactory(
+			final Socket socket, final Observable<String> decoded) {
+		return new Func1<SocketSubscription, Observable<Request>>() {
+
+			public Observable<Request> call(SocketSubscription t1) {
+				return StringObservable
+				// split by line feed
+						.split(decoded, "\n")
+						// stop when encounter blank line
+						.takeWhile(NON_BLANK)
+						// aggregate lines as list
+						.toList()
+						// parse the lines as a request
+						.map(TO_REQUEST)
+						// process the request
+						.doOnNext(process(socket));
+			}
+		};
 	}
 
 	private static class SocketSubscriptionFactory implements
