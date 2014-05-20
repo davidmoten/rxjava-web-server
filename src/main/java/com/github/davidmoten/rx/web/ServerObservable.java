@@ -20,7 +20,6 @@ import rx.functions.Action1;
 import rx.functions.Func0;
 import rx.functions.Func1;
 import rx.observables.StringObservable;
-import rx.schedulers.Schedulers;
 import rx.subscriptions.Subscriptions;
 
 public final class ServerObservable {
@@ -73,7 +72,7 @@ public final class ServerObservable {
 							.getInputStream());
 					final Observable<String> decoded = StringObservable.decode(
 							bytes, StandardCharsets.UTF_8);
-					Func1<SocketSubscription, Observable<Request>> obs = new Func1<SocketSubscription, Observable<Request>>() {
+					Func1<SocketSubscription, Observable<Request>> factory = new Func1<SocketSubscription, Observable<Request>>() {
 
 						public Observable<Request> call(SocketSubscription t1) {
 							return StringObservable
@@ -89,7 +88,9 @@ public final class ServerObservable {
 									.doOnNext(process(socket));
 						}
 					};
-					return using(new SocketSubscriptionFactory(socket), obs);
+					SocketSubscriptionFactory subscriptionFactory = new SocketSubscriptionFactory(
+							socket);
+					return using(subscriptionFactory, factory);
 				} catch (IOException e) {
 					return Observable.error(e);
 				}
@@ -171,12 +172,4 @@ public final class ServerObservable {
 		}
 	};
 
-	public static void main(String[] args) throws InterruptedException {
-		requests(8080).observeOn(Schedulers.io()).subscribe(
-				new Action1<Request>() {
-					public void call(Request request) {
-						System.out.println(request);
-					}
-				});
-	}
 }
