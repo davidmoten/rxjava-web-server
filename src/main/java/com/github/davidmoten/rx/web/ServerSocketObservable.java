@@ -61,11 +61,11 @@ public class ServerSocketObservable {
 		});
 	}
 
-	public static Observable<List<String>> lines(final int port) {
+	public static Observable<Request> lines(final int port) {
 		return from(port).observeOn(Schedulers.io()).flatMap(
-				new Func1<Socket, Observable<List<String>>>() {
+				new Func1<Socket, Observable<Request>>() {
 
-					public Observable<List<String>> call(final Socket socket) {
+					public Observable<Request> call(final Socket socket) {
 						try {
 							Observable<byte[]> bytes = StringObservable
 									.from(socket.getInputStream());
@@ -73,6 +73,7 @@ public class ServerSocketObservable {
 									.decode(bytes, StandardCharsets.UTF_8);
 							return StringObservable.split(decoded, "\n")
 									.takeWhile(NON_BLANK).toList()
+									.map(TO_REQUEST)
 									.doOnCompleted(new Action0() {
 
 										public void call() {
@@ -107,11 +108,17 @@ public class ServerSocketObservable {
 		}
 	};
 
+	private static Func1<List<String>, Request> TO_REQUEST = new Func1<List<String>, Request>() {
+
+		public Request call(List<String> lines) {
+			return new Request(lines);
+		}
+	};
+
 	public static void main(String[] args) throws InterruptedException {
-		lines(8080).subscribe(new Action1<List<String>>() {
-			public void call(List<String> request) {
-				for (String line : request)
-					System.out.println(line);
+		lines(8080).subscribe(new Action1<Request>() {
+			public void call(Request request) {
+				System.out.println(request);
 			}
 		});
 	}
