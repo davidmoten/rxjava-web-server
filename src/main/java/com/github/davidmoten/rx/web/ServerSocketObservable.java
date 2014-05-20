@@ -5,9 +5,9 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.nio.channels.IllegalBlockingModeException;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.List;
 
 import rx.Observable;
 import rx.Observable.OnSubscribe;
@@ -28,54 +28,51 @@ public class ServerSocketObservable {
 			public void call(Subscriber<? super Socket> subscriber) {
 				try {
 					final ServerSocket serverSocket = new ServerSocket(port);
-
-					Subscription closeServerSocket = Subscriptions
-							.create(new Action0() {
-								public void call() {
-									try {
-										serverSocket.close();
-									} catch (IOException e) {
-										throw new RuntimeException(e);
-									}
-								}
-							});
-
+					Subscription closeServerSocket = closingSubscription(serverSocket);
 					subscriber.add(closeServerSocket);
-
 					while (!subscriber.isUnsubscribed()) {
 						try {
 							Socket socket = serverSocket.accept();
 							subscriber.onNext(socket);
 						} catch (SocketTimeoutException e) {
 							// ignore, just wait again
-						} catch (IOException e) {
-							subscriber.onError(e);
-						} catch (SecurityException e) {
-							subscriber.onError(e);
-						} catch (IllegalBlockingModeException e) {
+						} catch (Exception e) {
 							subscriber.onError(e);
 						}
 					}
-
 				} catch (IOException e) {
 					subscriber.onError(e);
+				}
+			}
+
+		});
+	}
+
+	private static Subscription closingSubscription(
+			final ServerSocket serverSocket) {
+		return Subscriptions.create(new Action0() {
+			public void call() {
+				try {
+					serverSocket.close();
+				} catch (IOException e) {
+					throw new RuntimeException(e);
 				}
 			}
 		});
 	}
 
-	public static Observable<String> lines(final int port) {
+	public static Observable<List<String>> lines(final int port) {
 		return from(port).observeOn(Schedulers.io()).flatMap(
-				new Func1<Socket, Observable<String>>() {
+				new Func1<Socket, Observable<List<String>>>() {
 
-					public Observable<String> call(final Socket socket) {
+					public Observable<List<String>> call(final Socket socket) {
 						try {
 							Observable<byte[]> bytes = StringObservable
 									.from(socket.getInputStream());
 							Observable<String> decoded = StringObservable
 									.decode(bytes, StandardCharsets.UTF_8);
 							return StringObservable.split(decoded, "\n")
-									.takeWhile(NON_BLANK)
+									.takeWhile(NON_BLANK).toList()
 									.doOnCompleted(new Action0() {
 
 										public void call() {
@@ -111,9 +108,10 @@ public class ServerSocketObservable {
 	};
 
 	public static void main(String[] args) throws InterruptedException {
-		lines(8080).subscribe(new Action1<String>() {
-			public void call(String line) {
-				System.out.println(line.trim());
+		lines(8080).subscribe(new Action1<List<String>>() {
+			public void call(List<String> request) {
+				for (String line : request)
+					System.out.println(line);
 			}
 		});
 	}
