@@ -2,6 +2,7 @@ package com.github.davidmoten.rx.web;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.net.Socket;
 
 import rx.Observable;
@@ -19,6 +20,10 @@ public class Response {
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	public PrintWriter getWriter() {
+		return new PrintWriter(getOutputStream());
 	}
 
 	public void close() {

@@ -13,19 +13,10 @@ public class Main {
 		ServerObservable.requests(8080).observeOn(Schedulers.io())
 				.subscribe(new Observer<RequestResponse>() {
 
-					public void onCompleted() {
-
-					}
-
-					public void onError(Throwable e) {
-						e.printStackTrace();
-					}
-
 					public void onNext(RequestResponse r) {
 						System.out.println(r.request());
 						try {
-							PrintWriter out = new PrintWriter(r.response()
-									.getOutputStream());
+							PrintWriter out = r.response().getWriter();
 							out.print("HTTP/1.1 200 OK\r\n");
 							out.print("Content-Type: text/plain\r\n");
 							out.print("\r\n");
@@ -35,6 +26,14 @@ public class Main {
 						} catch (RuntimeException e) {
 							e.printStackTrace();
 						}
+					}
+
+					public void onError(Throwable e) {
+						e.printStackTrace();
+					}
+
+					public void onCompleted() {
+
 					}
 				});
 	}

@@ -6,6 +6,7 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import rx.Observable;
 import rx.Observable.OnSubscribe;
@@ -71,9 +72,9 @@ public final class ServerObservable {
 
 							return StringObservable
 							// split by line feed
-									.split(decoded, "\n")
+									.split(decoded, "\r\n")
 									// stop when encounter blank line
-									.takeWhile(NON_BLANK)
+									.takeWhile(lessThanTwoEmptyLines())
 									// aggregate lines as list
 									.toList()
 									// parse the lines as a request
@@ -85,12 +86,17 @@ public final class ServerObservable {
 				});
 	}
 
-	private static Func1<String, Boolean> NON_BLANK = new Func1<String, Boolean>() {
+	private static Func1<String, Boolean> lessThanTwoEmptyLines() {
+		return new Func1<String, Boolean>() {
+			AtomicInteger count = new AtomicInteger();
 
-		public Boolean call(String line) {
-			return line.trim().length() > 0;
-		}
-	};
+			public Boolean call(String line) {
+				if (line.length() > 0)
+					count.incrementAndGet();
+				return count.get() < 2;
+			}
+		};
+	}
 
 	private static Func1<List<String>, RequestResponse> toRequestResponse(
 			final Socket socket) {
