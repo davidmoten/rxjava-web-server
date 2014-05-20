@@ -13,6 +13,7 @@ import rx.Observable.OnSubscribe;
 import rx.Subscriber;
 import rx.Subscription;
 import rx.functions.Action0;
+import rx.functions.Action1;
 import rx.functions.Func1;
 import rx.observables.StringObservable;
 import rx.subscriptions.Subscriptions;
@@ -72,8 +73,10 @@ public final class ServerObservable {
 
 							return StringObservable
 							// split by line feed
-									.split(decoded, "\r\n")
-									// stop when encounter blank line
+									.split(decoded, "\n")
+									// log line
+									.doOnNext(LOG)
+									// stop when encounter second blank line
 									.takeWhile(lessThanTwoEmptyLines())
 									// aggregate lines as list
 									.toList()
@@ -86,12 +89,19 @@ public final class ServerObservable {
 				});
 	}
 
+	private static Action1<String> LOG = new Action1<String>() {
+
+		public void call(String line) {
+			System.out.println(line);
+		}
+	};
+
 	private static Func1<String, Boolean> lessThanTwoEmptyLines() {
 		return new Func1<String, Boolean>() {
 			AtomicInteger count = new AtomicInteger();
 
 			public Boolean call(String line) {
-				if (line.length() > 0)
+				if (line.trim().length() == 0)
 					count.incrementAndGet();
 				return count.get() < 2;
 			}
