@@ -26,6 +26,7 @@ public class ServerSocketObservable {
 		return Observable.create(new OnSubscribe<Socket>() {
 
 			public void call(Subscriber<? super Socket> subscriber) {
+				// TODO use Observable.using()?
 				try {
 					final ServerSocket serverSocket = new ServerSocket(port);
 					Subscription closeServerSocket = closingSubscription(serverSocket);
@@ -62,43 +63,40 @@ public class ServerSocketObservable {
 	}
 
 	public static Observable<Request> lines(final int port) {
-		return from(port).observeOn(Schedulers.io()).flatMap(
-				new Func1<Socket, Observable<Request>>() {
+		return from(port).flatMap(new Func1<Socket, Observable<Request>>() {
 
-					public Observable<Request> call(final Socket socket) {
-						try {
-							Observable<byte[]> bytes = StringObservable
-									.from(socket.getInputStream());
-							Observable<String> decoded = StringObservable
-									.decode(bytes, StandardCharsets.UTF_8);
-							return StringObservable.split(decoded, "\n")
-									.takeWhile(NON_BLANK).toList()
-									.map(TO_REQUEST)
-									.doOnCompleted(new Action0() {
+			public Observable<Request> call(final Socket socket) {
+				try {
+					Observable<byte[]> bytes = StringObservable.from(socket
+							.getInputStream());
+					Observable<String> decoded = StringObservable.decode(bytes,
+							StandardCharsets.UTF_8);
+					return StringObservable.split(decoded, "\n")
+							.takeWhile(NON_BLANK).toList().map(TO_REQUEST)
+							.doOnCompleted(new Action0() {
 
-										public void call() {
-											try {
-												PrintWriter out = new PrintWriter(
-														socket.getOutputStream());
-												out.print("HTTP/1.1 200 OK\r\n");
-												out.print("Content-Type: text/plain\r\n");
-												out.print("\r\n");
-												out.print("Got the message "
-														+ new Date());
-												out.close();
-												socket.close();
-												System.out
-														.println("-- closed socket");
-											} catch (IOException e) {
-												throw new RuntimeException(e);
-											}
-										}
-									});
-						} catch (IOException e) {
-							return Observable.error(e);
-						}
-					}
-				});
+								public void call() {
+									try {
+										PrintWriter out = new PrintWriter(
+												socket.getOutputStream());
+										out.print("HTTP/1.1 200 OK\r\n");
+										out.print("Content-Type: text/plain\r\n");
+										out.print("\r\n");
+										out.print("Got the message "
+												+ new Date());
+										out.close();
+										socket.close();
+										System.out.println("-- closed socket");
+									} catch (IOException e) {
+										throw new RuntimeException(e);
+									}
+								}
+							});
+				} catch (IOException e) {
+					return Observable.error(e);
+				}
+			}
+		});
 	}
 
 	private static Func1<String, Boolean> NON_BLANK = new Func1<String, Boolean>() {
@@ -116,10 +114,11 @@ public class ServerSocketObservable {
 	};
 
 	public static void main(String[] args) throws InterruptedException {
-		lines(8080).subscribe(new Action1<Request>() {
-			public void call(Request request) {
-				System.out.println(request);
-			}
-		});
+		lines(8080).observeOn(Schedulers.io()).subscribe(
+				new Action1<Request>() {
+					public void call(Request request) {
+						System.out.println(request);
+					}
+				});
 	}
 }
