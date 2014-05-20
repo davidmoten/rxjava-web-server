@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.Charset;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -68,7 +68,7 @@ public final class ServerObservable {
 							Observable<byte[]> bytes = StringObservable
 									.from(socket.getInputStream());
 							final Observable<String> decoded = StringObservable
-									.decode(bytes, StandardCharsets.UTF_8);
+									.decode(bytes, Charset.forName("US-ASCII"));
 
 							return StringObservable
 							// split by line feed
