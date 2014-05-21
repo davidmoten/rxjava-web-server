@@ -34,6 +34,10 @@ public class Request {
 					+ firstLine + "'");
 	}
 
+	public Observable<byte[]> getMessageBody() {
+		return messageBody;
+	}
+
 	@Override
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
