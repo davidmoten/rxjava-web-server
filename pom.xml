@@ -7,12 +7,19 @@
     <name>${project.artifactId}</name>
     <properties>
         <rxjava.version>0.18.3</rxjava.version>
+        <maven.compiler.target>1.6</maven.compiler.target>
     </properties>
     <dependencies>
         <dependency>
             <groupId>com.netflix.rxjava</groupId>
             <artifactId>rxjava-string</artifactId>
             <version>${rxjava.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.11</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

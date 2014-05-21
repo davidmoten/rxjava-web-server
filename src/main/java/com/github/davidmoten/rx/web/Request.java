@@ -5,6 +5,8 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import rx.Observable;
+
 public class Request {
 
 	private static Pattern firstLinePattern = Pattern
@@ -16,8 +18,11 @@ public class Request {
 	Method method;
 	String version;
 
-	public Request(List<String> lines) {
+	private final Observable<byte[]> messageBody;
 
+	public Request(List<String> lines, Observable<byte[]> messageBody) {
+
+		this.messageBody = messageBody;
 		String firstLine = lines.get(0);
 		Matcher matcher = firstLinePattern.matcher(firstLine);
 		if (matcher.matches()) {

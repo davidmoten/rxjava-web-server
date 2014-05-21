@@ -22,7 +22,7 @@ public class Response {
 		}
 	}
 
-	public PrintWriter getWriter() {
+	public PrintWriter createWriter() {
 		return new PrintWriter(getOutputStream());
 	}
 

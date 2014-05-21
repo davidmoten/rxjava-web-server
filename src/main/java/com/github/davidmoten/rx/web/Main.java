@@ -16,7 +16,7 @@ public class Main {
 					public void onNext(RequestResponse r) {
 						System.out.println(r.request());
 						try {
-							PrintWriter out = r.response().getWriter();
+							PrintWriter out = r.response().createWriter();
 							out.print("HTTP/1.1 200 OK\r\n");
 							out.print("Content-Type: text/plain\r\n");
 							out.print("\r\n");

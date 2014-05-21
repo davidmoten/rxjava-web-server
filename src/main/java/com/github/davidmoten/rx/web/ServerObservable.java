@@ -1,11 +1,14 @@
 package com.github.davidmoten.rx.web;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import rx.Observable;
@@ -23,6 +26,7 @@ public final class ServerObservable {
 	public static Observable<Socket> from(final int port) {
 		return Observable.create(new OnSubscribe<Socket>() {
 
+			@Override
 			public void call(Subscriber<? super Socket> subscriber) {
 				try {
 					final ServerSocket serverSocket = new ServerSocket(port);
@@ -50,6 +54,7 @@ public final class ServerObservable {
 	private static Subscription closingSubscription(
 			final ServerSocket serverSocket) {
 		return Subscriptions.create(new Action0() {
+			@Override
 			public void call() {
 				try {
 					serverSocket.close();
@@ -64,16 +69,22 @@ public final class ServerObservable {
 		return from(port).flatMap(
 				new Func1<Socket, Observable<RequestResponse>>() {
 
+					@Override
 					public Observable<RequestResponse> call(final Socket socket) {
+						System.out.println("reading request from " + socket);
 						try {
 							Observable<byte[]> bytes = StringObservable
 									.from(socket.getInputStream());
-							final Observable<String> decoded = StringObservable
-									.decode(bytes, Charset.forName("US-ASCII"));
+							Observable<byte[]> requestHeaderAndMessageBody = aggregateHeader(
+									bytes, requestTerminatorMatcher);
+
+							final Observable<String> header = StringObservable.decode(
+									requestHeaderAndMessageBody.first(),
+									Charset.forName("US-ASCII"));
 
 							return StringObservable
 							// split by line feed
-									.split(decoded, "\n")
+									.split(header, "\n")
 									// log line
 									.doOnNext(LOG)
 									// stop when encounter second blank line
@@ -81,16 +92,74 @@ public final class ServerObservable {
 									// aggregate lines as list
 									.toList()
 									// parse the lines as a request
-									.map(toRequestResponse(socket));
+									.map(toRequestResponse(socket,
+											requestHeaderAndMessageBody.skip(1)));
 						} catch (IOException e) {
 							return Observable.error(e);
 						}
 					}
+
 				});
+	}
+
+	private static ByteMatcher requestTerminatorMatcher = new ByteMatcher(
+			new byte[] { '\r', '\n', '\r', '\n' });
+
+	/**
+	 * All bytes up to the occurrence of \r\n\r\n are part of the request and
+	 * following that is the message body. The first byte array emitted is the
+	 * complete bytes of the request headers and then follows a sequence of
+	 * message body segments.
+	 * 
+	 * @param bytes
+	 * @return
+	 */
+	public static Observable<byte[]> aggregateHeader(Observable<byte[]> source,
+			final ByteMatcher splitMatcher) {
+		return source.concatMap(new Func1<byte[], Observable<byte[]>>() {
+
+			ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+			AtomicBoolean found = new AtomicBoolean(false);
+
+			@Override
+			public Observable<byte[]> call(byte[] bytes) {
+				System.out.println("bytes: " + new String(bytes));
+				if (found.get())
+					return Observable.just(bytes);
+				else {
+					try {
+						buffer.write(bytes);
+						byte[] array = buffer.toByteArray();
+						int index = splitMatcher.search(array);
+						if (index != -1) {
+							found.set(true);
+							byte[] requestHeader = Arrays.copyOfRange(array, 0,
+									index);
+							if (index + splitMatcher.patternLength() == array.length) {
+								// release some memory
+								buffer.reset();
+								return Observable.just(requestHeader);
+							} else {
+								byte[] rest = Arrays.copyOfRange(array, index
+										+ splitMatcher.patternLength(),
+										array.length);
+								// release some memory
+								buffer.reset();
+								return Observable.from(requestHeader, rest);
+							}
+						} else
+							return Observable.empty();
+					} catch (IOException e) {
+						return Observable.error(e);
+					}
+				}
+			}
+		});
 	}
 
 	private static Action1<String> LOG = new Action1<String>() {
 
+		@Override
 		public void call(String line) {
 			System.out.println(line);
 		}
@@ -100,21 +169,23 @@ public final class ServerObservable {
 		return new Func1<String, Boolean>() {
 			AtomicInteger count = new AtomicInteger();
 
+			@Override
 			public Boolean call(String line) {
 				if (line.trim().length() == 0)
 					count.incrementAndGet();
-				return count.get() < 2;
+				return count.get() < 1;
 			}
 		};
 	}
 
 	private static Func1<List<String>, RequestResponse> toRequestResponse(
-			final Socket socket) {
+			final Socket socket, final Observable<byte[]> messageBody) {
 		return new Func1<List<String>, RequestResponse>() {
 
+			@Override
 			public RequestResponse call(List<String> lines) {
-				return new RequestResponse(new Request(lines), new Response(
-						socket));
+				return new RequestResponse(new Request(lines, messageBody),
+						new Response(socket));
 			}
 		};
 	}
