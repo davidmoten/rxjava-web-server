@@ -13,6 +13,7 @@ public class Main {
 		ServerObservable.requests(8080).observeOn(Schedulers.io())
 				.subscribe(new Observer<RequestResponse>() {
 
+					@Override
 					public void onNext(RequestResponse r) {
 						System.out.println(r.request());
 						try {
@@ -28,10 +29,12 @@ public class Main {
 						}
 					}
 
+					@Override
 					public void onError(Throwable e) {
 						e.printStackTrace();
 					}
 
+					@Override
 					public void onCompleted() {
 
 					}
