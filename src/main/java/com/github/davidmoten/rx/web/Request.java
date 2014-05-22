@@ -17,12 +17,12 @@ public class Request {
 	String path;
 	Method method;
 	String version;
+	Long contentLength;
 
 	private final Observable<byte[]> messageBody;
 
 	public Request(List<String> lines, Observable<byte[]> messageBody) {
 
-		this.messageBody = messageBody;
 		String firstLine = lines.get(0);
 		Matcher matcher = firstLinePattern.matcher(firstLine);
 		if (matcher.matches()) {
@@ -32,6 +32,19 @@ public class Request {
 		} else
 			throw new RuntimeException("first line does not match!:'"
 					+ firstLine + "'");
+
+		if (contains(lines, "Content-Type: application/x-www-form-urlencoded"))
+			this.messageBody = ServerObservable.aggregateHeader(messageBody,
+					new ByteMatcher(new byte[] { '\n' })).first();
+		else
+			this.messageBody = Observable.empty();
+	}
+
+	private boolean contains(List<String> lines, String string) {
+		for (String line : lines)
+			if (line.trim().equals(string))
+				return true;
+		return false;
 	}
 
 	public Observable<byte[]> getMessageBody() {

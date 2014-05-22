@@ -1,12 +1,15 @@
 package com.github.davidmoten.rx.web;
 
 import java.io.PrintWriter;
+import java.nio.charset.Charset;
 import java.util.Date;
+import java.util.List;
 
 import rx.Observer;
+import rx.observables.StringObservable;
 import rx.schedulers.Schedulers;
 
-public class Main {
+public class ServerMain {
 
 	public static void main(String[] args) throws InterruptedException {
 
@@ -16,6 +19,14 @@ public class Main {
 					@Override
 					public void onNext(RequestResponse r) {
 						System.out.println(r.request());
+						System.out.println("--body--");
+						List<String> list = StringObservable
+								.decode(r.request().getMessageBody(),
+										Charset.forName("US-ASCII")).toList()
+								.toBlockingObservable().single();
+						for (String s : list)
+							System.out.print(s);
+						System.out.println("--end--");
 						try {
 							PrintWriter out = r.response().createWriter();
 							out.print("HTTP/1.1 200 OK\r\n");
