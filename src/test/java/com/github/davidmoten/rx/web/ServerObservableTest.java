@@ -7,6 +7,7 @@ import java.util.List;
 import org.junit.Test;
 
 import rx.Observable;
+import rx.subjects.PublishSubject;
 
 public class ServerObservableTest {
 
@@ -16,7 +17,7 @@ public class ServerObservableTest {
 				.aggregateHeader(
 						Observable.from(new byte[] { 'a', 'b', 'c' },
 								new byte[] { 'd', 'e', 'f' }),
-						new ByteMatcher(new byte[] { 'c', 'd' })).toList()
+						new byte[] { 'c', 'd' }).toList()
 				.toBlockingObservable().single();
 		assertEquals("ab", new String(list.get(0)));
 	}
@@ -26,9 +27,15 @@ public class ServerObservableTest {
 		List<byte[]> list = ServerObservable
 				.aggregateHeader(
 						Observable.from(new byte[] { 'a', 'b', 'c', 'd' }),
-						new ByteMatcher(new byte[] { 'c', 'd' })).toList()
+						new byte[] { 'c', 'd' }).toList()
 				.toBlockingObservable().single();
 		assertEquals("ab", new String(list.get(0)));
 		assertEquals(1, list.size());
+	}
+
+	@Test
+	public void testTakeConcurrentSafe() {
+		PublishSubject<Integer> subject = PublishSubject.create();
+
 	}
 }
