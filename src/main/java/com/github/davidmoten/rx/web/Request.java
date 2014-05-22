@@ -1,5 +1,6 @@
 package com.github.davidmoten.rx.web;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -32,19 +33,26 @@ public class Request {
 		} else
 			throw new RuntimeException("first line does not match!:'"
 					+ firstLine + "'");
+		headers = getHeaders(lines);
 
-		if (contains(lines, "Content-Type: application/x-www-form-urlencoded"))
+		if ("application/x-www-form-urlencoded".equals(headers
+				.get("Content-Type")))
 			this.messageBody = ServerObservable.aggregateHeader(messageBody,
-					new ByteMatcher(new byte[] { '\n' })).first();
+					new byte[] { '\n' }).first();
 		else
 			this.messageBody = Observable.empty();
 	}
 
-	private boolean contains(List<String> lines, String string) {
-		for (String line : lines)
-			if (line.trim().equals(string))
-				return true;
-		return false;
+	private static Map<String, String> getHeaders(List<String> lines) {
+		Map<String, String> map = new HashMap<String, String>();
+		for (int i = 1; i < lines.size(); i++) {
+			String line = lines.get(i);
+			int index = line.indexOf(':');
+			if (index != -1 && index < line.length() - 1) {
+				map.put(line.substring(0, index), line.substring(index + 1));
+			}
+		}
+		return map;
 	}
 
 	public Observable<byte[]> getMessageBody() {

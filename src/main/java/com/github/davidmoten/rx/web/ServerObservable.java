@@ -76,7 +76,7 @@ public final class ServerObservable {
 							Observable<byte[]> bytes = StringObservable
 									.from(socket.getInputStream());
 							Observable<byte[]> requestHeaderAndMessageBody = aggregateHeader(
-									bytes, requestTerminatorMatcher);
+									bytes, requestTerminator);
 
 							final Observable<String> header = StringObservable.decode(
 									requestHeaderAndMessageBody.first(),
@@ -102,8 +102,8 @@ public final class ServerObservable {
 				});
 	}
 
-	private static ByteMatcher requestTerminatorMatcher = new ByteMatcher(
-			new byte[] { '\r', '\n', '\r', '\n' });
+	private static byte[] requestTerminator = new byte[] { '\r', '\n', '\r',
+			'\n' };
 
 	/**
 	 * All bytes up to the occurrence of \r\n\r\n are part of the request and
@@ -115,9 +115,10 @@ public final class ServerObservable {
 	 * @return
 	 */
 	public static Observable<byte[]> aggregateHeader(Observable<byte[]> source,
-			final ByteMatcher splitMatcher) {
+			final byte[] pattern) {
 		return source.concatMap(new Func1<byte[], Observable<byte[]>>() {
 
+			final ByteMatcher splitMatcher = new ByteMatcher(pattern);
 			ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 			AtomicBoolean found = new AtomicBoolean(false);
 
