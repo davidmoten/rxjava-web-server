@@ -7,7 +7,8 @@ import java.util.List;
 import org.junit.Test;
 
 import rx.Observable;
-import rx.subjects.PublishSubject;
+import rx.functions.Action1;
+import rx.schedulers.Schedulers;
 
 public class ServerObservableTest {
 
@@ -35,7 +36,18 @@ public class ServerObservableTest {
 
 	@Test
 	public void testTakeConcurrentSafe() {
-		PublishSubject<Integer> subject = PublishSubject.create();
+		int count = Observable.from(1, 2, 3).observeOn(Schedulers.newThread())
+				.take(1).doOnNext(new Action1<Integer>() {
 
+					@Override
+					public void call(Integer n) {
+						try {
+							Thread.sleep(100);
+						} catch (InterruptedException e) {
+							// do nothing
+						}
+					}
+				}).count().toBlockingObservable().single();
+		assertEquals(1, count);
 	}
 }

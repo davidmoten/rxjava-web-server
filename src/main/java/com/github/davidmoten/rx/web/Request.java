@@ -1,5 +1,7 @@
 package com.github.davidmoten.rx.web;
 
+import static com.github.davidmoten.rx.web.ByteObservable.first;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,6 +11,12 @@ import java.util.regex.Pattern;
 import rx.Observable;
 
 public class Request {
+
+	private static final String CONTENT_TYPE = "Content-Type";
+
+	private static final String APPLICATION_X_WWW_FORM_URLENCODED = "application/x-www-form-urlencoded";
+
+	private static final Object CONTENT_LENGTH = "Content-Length";
 
 	private static Pattern firstLinePattern = Pattern
 			.compile("^(\\S+) (\\S+) (\\S+)\\s*$");
@@ -35,11 +43,13 @@ public class Request {
 					+ firstLine + "'");
 		headers = getHeaders(lines);
 
-		if ("application/x-www-form-urlencoded".equals(headers
-				.get("Content-Type")))
-			this.messageBody = ServerObservable.aggregateHeader(messageBody,
-					new byte[] { '\n' }).first();
-		else
+		if (headers.get(CONTENT_LENGTH) != null
+				&& APPLICATION_X_WWW_FORM_URLENCODED.equals(headers
+						.get(CONTENT_TYPE))) {
+			int length = Integer.parseInt(headers.get(CONTENT_LENGTH));
+			System.out.println("using length!!!!!!!!!!!!!!!!!");
+			this.messageBody = messageBody.lift(first(length));
+		} else
 			this.messageBody = Observable.empty();
 	}
 
@@ -48,8 +58,10 @@ public class Request {
 		for (int i = 1; i < lines.size(); i++) {
 			String line = lines.get(i);
 			int index = line.indexOf(':');
-			if (index != -1 && index < line.length() - 1) {
-				map.put(line.substring(0, index), line.substring(index + 1));
+			if (index != -1 && index < line.length() - 2) {
+				// for value skip ':' and ' '
+				map.put(line.substring(0, index), line.substring(index + 2)
+						.trim());
 			}
 		}
 		return map;

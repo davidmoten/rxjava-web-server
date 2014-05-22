@@ -43,18 +43,16 @@ public class ByteObservable {
 					@Override
 					public void onNext(byte[] b) {
 						if (!isUnsubscribed()) {
-							synchronized (this) {
-								int num = Math.min(b.length, n - buffer.size());
-								if (num > 0)
-									buffer.write(b, 0, num);
-							}
-							if (buffer.size() == n) {
-								completed = true;
-								child.onNext(buffer.toByteArray());
-								buffer.reset();
-								child.onCompleted();
-								unsubscribe();
-							}
+							int num = Math.min(b.length, n - buffer.size());
+							if (num > 0)
+								buffer.write(b, 0, num);
+						}
+						if (buffer.size() == n) {
+							completed = true;
+							child.onNext(buffer.toByteArray());
+							buffer.reset();
+							child.onCompleted();
+							unsubscribe();
 						}
 					}
 

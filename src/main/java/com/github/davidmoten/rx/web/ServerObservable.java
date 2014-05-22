@@ -71,7 +71,7 @@ public final class ServerObservable {
 
 					@Override
 					public Observable<RequestResponse> call(final Socket socket) {
-						System.out.println("reading request from " + socket);
+						System.out.println("\nreading request from " + socket);
 						try {
 							Observable<byte[]> bytes = StringObservable
 									.from(socket.getInputStream());
