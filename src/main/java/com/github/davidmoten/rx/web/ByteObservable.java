@@ -3,47 +3,62 @@ package com.github.davidmoten.rx.web;
 import java.io.ByteArrayOutputStream;
 
 import rx.Observable.Operator;
-import rx.Observer;
 import rx.Subscriber;
-import rx.observers.Subscribers;
+import rx.subscriptions.CompositeSubscription;
 
 public class ByteObservable {
 
 	public static Operator<byte[], byte[]> first(final int n) {
 		return new Operator<byte[], byte[]>() {
 
-			private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-
 			@Override
 			public Subscriber<? super byte[]> call(
-					final Subscriber<? super byte[]> subscriber) {
-				Subscriber<byte[]> sub = Subscribers
-						.from(new Observer<byte[]>() {
+					final Subscriber<? super byte[]> child) {
 
-							@Override
-							public void onCompleted() {
-								subscriber.onCompleted();
-							}
+				final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+				CompositeSubscription parent = new CompositeSubscription();
+				if (n == 0) {
+					child.onCompleted();
+					parent.unsubscribe();
+				}
+				child.add(parent);
+				return new Subscriber<byte[]>(parent) {
 
-							@Override
-							public void onError(Throwable e) {
-								subscriber.onError(e);
-							}
+					boolean completed = false;
 
-							@Override
-							public void onNext(byte[] b) {
+					@Override
+					public void onCompleted() {
+						if (!completed) {
+							child.onCompleted();
+						}
+					}
+
+					@Override
+					public void onError(Throwable e) {
+						if (!completed) {
+							child.onError(e);
+						}
+					}
+
+					@Override
+					public void onNext(byte[] b) {
+						if (!isUnsubscribed()) {
+							synchronized (this) {
 								int num = Math.min(b.length, n - buffer.size());
 								if (num > 0)
 									buffer.write(b, 0, num);
-								if (buffer.size() == n) {
-									subscriber.onNext(buffer.toByteArray());
-									buffer.reset();
-									subscriber.onCompleted();
-								}
 							}
-						});
-				subscriber.add(sub);
-				return sub;
+							if (buffer.size() == n) {
+								completed = true;
+								child.onNext(buffer.toByteArray());
+								buffer.reset();
+								child.onCompleted();
+								unsubscribe();
+							}
+						}
+					}
+
+				};
 			}
 		};
 
