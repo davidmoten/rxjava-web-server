@@ -2,6 +2,7 @@ package com.github.davidmoten.rx.web;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -73,33 +74,40 @@ public final class ServerObservable {
 					public Observable<RequestResponse> call(final Socket socket) {
 						System.out.println("\nreading request from " + socket);
 						try {
-							Observable<byte[]> bytes = StringObservable
-									.from(socket.getInputStream());
-							Observable<byte[]> requestHeaderAndMessageBody = aggregateHeader(
-									bytes, requestTerminator);
+							InputStream is = socket.getInputStream();
+							return toRequestResponse(socket, is);
 
-							final Observable<String> header = StringObservable.decode(
-									requestHeaderAndMessageBody.first(),
-									Charset.forName("US-ASCII"));
-
-							return StringObservable
-							// split by line feed
-									.split(header, "\n")
-									// log line
-									.doOnNext(LOG)
-									// stop when encounter second blank line
-									.takeWhile(lessThanTwoEmptyLines())
-									// aggregate lines as list
-									.toList()
-									// parse the lines as a request
-									.map(toRequestResponse(socket,
-											requestHeaderAndMessageBody.skip(1)));
 						} catch (IOException e) {
 							return Observable.error(e);
 						}
 					}
 
 				});
+	}
+
+	static Observable<RequestResponse> toRequestResponse(final Socket socket,
+			InputStream is) {
+		Observable<byte[]> bytes = StringObservable.from(is);
+		Observable<byte[]> requestHeaderAndMessageBody = aggregateHeader(bytes,
+				requestTerminator);
+
+		Observable<byte[]> cache = requestHeaderAndMessageBody.cache();
+
+		final Observable<String> header = StringObservable.decode(
+				cache.first(), Charset.forName("US-ASCII"));
+
+		Observable<RequestResponse> result = StringObservable
+		// split by line feed
+				.split(header, "\n")
+				// log line
+				.doOnNext(LOG)
+				// stop when encounter second blank line
+				.takeWhile(lessThanTwoEmptyLines())
+				// aggregate lines as list
+				.toList()
+				// parse the lines as a request
+				.map(toRequestResponse(socket, cache.skip(1)));
+		return result;
 	}
 
 	private static byte[] requestTerminator = new byte[] { '\r', '\n', '\r',

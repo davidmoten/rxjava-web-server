@@ -8,7 +8,9 @@ import rx.subscriptions.CompositeSubscription;
 
 public class ByteObservable {
 
-	public static Operator<byte[], byte[]> first(final int n) {
+	public static Operator<byte[], byte[]> split(final int n) {
+		if (n <= 0)
+			throw new IllegalArgumentException("n must be positive");
 		return new Operator<byte[], byte[]>() {
 
 			@Override
@@ -24,20 +26,18 @@ public class ByteObservable {
 				child.add(parent);
 				return new Subscriber<byte[]>(parent) {
 
-					boolean completed = false;
-
 					@Override
 					public void onCompleted() {
-						if (!completed) {
-							child.onCompleted();
+						if (!isUnsubscribed() && buffer.size() > 0) {
+							child.onNext(buffer.toByteArray());
+							buffer.reset();
 						}
+						child.onCompleted();
 					}
 
 					@Override
 					public void onError(Throwable e) {
-						if (!completed) {
-							child.onError(e);
-						}
+						child.onError(e);
 					}
 
 					@Override
@@ -46,16 +46,13 @@ public class ByteObservable {
 							int num = Math.min(b.length, n - buffer.size());
 							if (num > 0)
 								buffer.write(b, 0, num);
+							if (buffer.size() == n) {
+								child.onNext(buffer.toByteArray());
+								buffer.reset();
+							}
 						}
-						if (buffer.size() == n) {
-							completed = true;
-							child.onNext(buffer.toByteArray());
-							buffer.reset();
-							child.onCompleted();
-							unsubscribe();
-						}
-					}
 
+					}
 				};
 			}
 		};

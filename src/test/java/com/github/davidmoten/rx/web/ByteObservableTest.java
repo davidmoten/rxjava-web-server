@@ -15,10 +15,11 @@ public class ByteObservableTest {
 		List<byte[]> list = Observable
 				.from(new byte[] { 'a', 'b', 'c' },
 						new byte[] { 'd', 'e', 'f' })
-				.lift(ByteObservable.first(4)).toList().toBlockingObservable()
+				.lift(ByteObservable.split(4)).toList().toBlockingObservable()
 				.single();
-		assertEquals(1, list.size());
+		assertEquals(2, list.size());
 		assertEquals("abcd", new String(list.get(0)));
+		assertEquals("ef", new String(list.get(1)));
 	}
 
 	@Test
@@ -26,19 +27,18 @@ public class ByteObservableTest {
 		List<byte[]> list = Observable
 				.from(new byte[] { 'a', 'b', 'c' },
 						new byte[] { 'd', 'e', 'f' })
-				.lift(ByteObservable.first(2)).toList().toBlockingObservable()
+				.lift(ByteObservable.split(2)).toList().toBlockingObservable()
 				.single();
-		assertEquals(1, list.size());
+		assertEquals(3, list.size());
 		assertEquals("ab", new String(list.get(0)));
+		assertEquals("cd", new String(list.get(1)));
+		assertEquals("ef", new String(list.get(2)));
 	}
 
-	@Test
+	@Test(expected = IllegalArgumentException.class)
 	public void testFirstZeroBytes() {
-		List<byte[]> list = Observable
-				.from(new byte[] { 'a', 'b', 'c' },
-						new byte[] { 'd', 'e', 'f' })
-				.lift(ByteObservable.first(0)).toList().toBlockingObservable()
-				.single();
-		assertEquals(0, list.size());
+		Observable.from(new byte[] { 'a', 'b', 'c' }).lift(
+				ByteObservable.split(0));
 	}
+
 }

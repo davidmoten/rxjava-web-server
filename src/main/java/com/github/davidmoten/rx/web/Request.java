@@ -1,7 +1,8 @@
 package com.github.davidmoten.rx.web;
 
-import static com.github.davidmoten.rx.web.ByteObservable.first;
+import static com.github.davidmoten.rx.web.ByteObservable.split;
 
+import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,6 +10,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import rx.Observable;
+import rx.observables.StringObservable;
 
 public class Request {
 
@@ -31,6 +33,9 @@ public class Request {
 	private final Observable<byte[]> messageBody;
 
 	public Request(List<String> lines, Observable<byte[]> messageBody) {
+		System.out.println("mbody="
+				+ new String(messageBody.first().toBlockingObservable()
+						.single()));
 
 		String firstLine = lines.get(0);
 		Matcher matcher = firstLinePattern.matcher(firstLine);
@@ -48,7 +53,12 @@ public class Request {
 						.get(CONTENT_TYPE))) {
 			int length = Integer.parseInt(headers.get(CONTENT_LENGTH));
 			System.out.println("using length!!!!!!!!!!!!!!!!!");
-			this.messageBody = messageBody.lift(first(length));
+			this.messageBody = messageBody.lift(split(length)).first();
+			List<String> list = StringObservable
+					.split(StringObservable.decode(messageBody,
+							Charset.forName("UTF-8")), "\n").toList()
+					.toBlockingObservable().single();
+			System.out.println("messageBody=" + list);
 		} else
 			this.messageBody = Observable.empty();
 	}

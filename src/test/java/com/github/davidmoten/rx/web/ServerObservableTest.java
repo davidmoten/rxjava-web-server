@@ -1,14 +1,14 @@
 package com.github.davidmoten.rx.web;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
+import java.io.InputStream;
 import java.util.List;
 
 import org.junit.Test;
 
 import rx.Observable;
-import rx.functions.Action1;
-import rx.schedulers.Schedulers;
 
 public class ServerObservableTest {
 
@@ -35,19 +35,13 @@ public class ServerObservableTest {
 	}
 
 	@Test
-	public void testTakeConcurrentSafe() {
-		int count = Observable.from(1, 2, 3).observeOn(Schedulers.newThread())
-				.take(1).doOnNext(new Action1<Integer>() {
+	public void test() {
+		InputStream is = ServerObservableTest.class
+				.getResourceAsStream("/request-post.txt");
+		assertNotNull(is);
+		RequestResponse o = ServerObservable.toRequestResponse(null, is)
+				.first().toBlockingObservable().single();
+		System.out.println(o);
 
-					@Override
-					public void call(Integer n) {
-						try {
-							Thread.sleep(100);
-						} catch (InterruptedException e) {
-							// do nothing
-						}
-					}
-				}).count().toBlockingObservable().single();
-		assertEquals(1, count);
 	}
 }
