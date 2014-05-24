@@ -11,6 +11,7 @@ public class ByteObservable {
 	public static Operator<byte[], byte[]> split(final int n) {
 		if (n <= 0)
 			throw new IllegalArgumentException("n must be positive");
+
 		return new Operator<byte[], byte[]>() {
 
 			@Override

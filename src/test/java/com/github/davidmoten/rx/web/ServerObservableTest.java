@@ -3,9 +3,13 @@ package com.github.davidmoten.rx.web;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.List;
 
+import org.apache.commons.io.IOUtils;
 import org.junit.Test;
 
 import rx.Observable;
@@ -42,6 +46,20 @@ public class ServerObservableTest {
 		RequestResponse o = ServerObservable.toRequestResponse(null, is)
 				.first().toBlockingObservable().single();
 		System.out.println(o);
+	}
 
+	@Test
+	public void test2() throws IOException {
+		InputStream resource = ServerObservableTest.class
+				.getResourceAsStream("/request-post.txt");
+		byte[] bytes = IOUtils.toByteArray(resource);
+
+		ByteArrayInputStream is = new ByteArrayInputStream(Arrays.copyOf(bytes,
+				100000));
+
+		RequestResponse o = ServerObservable.toRequestResponse(null, is)
+				.first().toBlockingObservable().single();
+		System.out.println(new String(o.request().getMessageBody().toList()
+				.toBlockingObservable().single().get(0)));
 	}
 }
