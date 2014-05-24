@@ -19,10 +19,6 @@ public class ByteObservable {
 
 				final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 				CompositeSubscription parent = new CompositeSubscription();
-				if (n == 0) {
-					child.onCompleted();
-					parent.unsubscribe();
-				}
 				child.add(parent);
 				return new Subscriber<byte[]>(parent) {
 
@@ -42,14 +38,16 @@ public class ByteObservable {
 
 					@Override
 					public void onNext(byte[] b) {
-						if (!isUnsubscribed()) {
-							int num = Math.min(b.length, n - buffer.size());
+						int i = 0;
+						while (!isUnsubscribed() && i < b.length) {
+							int num = Math.min(b.length - i, n - buffer.size());
 							if (num > 0)
-								buffer.write(b, 0, num);
+								buffer.write(b, i, num);
 							if (buffer.size() == n) {
 								child.onNext(buffer.toByteArray());
 								buffer.reset();
 							}
+							i += num;
 						}
 
 					}

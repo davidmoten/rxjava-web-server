@@ -89,12 +89,11 @@ public final class ServerObservable {
 			InputStream is) {
 		Observable<byte[]> bytes = StringObservable.from(is);
 		Observable<byte[]> requestHeaderAndMessageBody = aggregateHeader(bytes,
-				requestTerminator);
-
-		Observable<byte[]> cache = requestHeaderAndMessageBody.cache();
+				requestTerminator).cache();
 
 		final Observable<String> header = StringObservable.decode(
-				cache.first(), Charset.forName("US-ASCII"));
+				requestHeaderAndMessageBody.first(),
+				Charset.forName("US-ASCII"));
 
 		Observable<RequestResponse> result = StringObservable
 		// split by line feed
@@ -106,7 +105,8 @@ public final class ServerObservable {
 				// aggregate lines as list
 				.toList()
 				// parse the lines as a request
-				.map(toRequestResponse(socket, cache.skip(1)));
+				.map(toRequestResponse(socket,
+						requestHeaderAndMessageBody.skip(1)));
 		return result;
 	}
 
@@ -132,7 +132,6 @@ public final class ServerObservable {
 
 			@Override
 			public Observable<byte[]> call(byte[] bytes) {
-				System.out.println("bytes: " + new String(bytes));
 				if (found.get())
 					return Observable.just(bytes);
 				else {

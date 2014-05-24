@@ -1,6 +1,8 @@
 package com.github.davidmoten.rx.web;
 
 import static com.github.davidmoten.rx.web.ByteObservable.split;
+import static rx.observables.StringObservable.decode;
+import static rx.observables.StringObservable.split;
 
 import java.nio.charset.Charset;
 import java.util.HashMap;
@@ -10,7 +12,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import rx.Observable;
-import rx.observables.StringObservable;
 
 public class Request {
 
@@ -33,10 +34,6 @@ public class Request {
 	private final Observable<byte[]> messageBody;
 
 	public Request(List<String> lines, Observable<byte[]> messageBody) {
-		System.out.println("mbody="
-				+ new String(messageBody.first().toBlockingObservable()
-						.single()));
-
 		String firstLine = lines.get(0);
 		Matcher matcher = firstLinePattern.matcher(firstLine);
 		if (matcher.matches()) {
@@ -48,16 +45,16 @@ public class Request {
 					+ firstLine + "'");
 		headers = getHeaders(lines);
 
-		if (headers.get(CONTENT_LENGTH) != null
+		if (method.equals(Method.POST)
+				&& headers.get(CONTENT_LENGTH) != null
 				&& APPLICATION_X_WWW_FORM_URLENCODED.equals(headers
 						.get(CONTENT_TYPE))) {
 			int length = Integer.parseInt(headers.get(CONTENT_LENGTH));
-			System.out.println("using length!!!!!!!!!!!!!!!!!");
+			System.out.println("------------using length!!!!!!!!!!!!!!!!!");
 			this.messageBody = messageBody.lift(split(length)).first();
-			List<String> list = StringObservable
-					.split(StringObservable.decode(messageBody,
-							Charset.forName("UTF-8")), "\n").toList()
-					.toBlockingObservable().single();
+			List<String> list = split(
+					decode(messageBody, Charset.forName("UTF-8")), "\n")
+					.toList().toBlockingObservable().single();
 			System.out.println("messageBody=" + list);
 		} else
 			this.messageBody = Observable.empty();
