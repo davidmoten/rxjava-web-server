@@ -62,4 +62,5 @@ public class ServerObservableTest {
 		System.out.println(new String(o.request().getMessageBody().toList()
 				.toBlockingObservable().single().get(0)));
 	}
+
 }

@@ -41,4 +41,13 @@ public class ByteObservableTest {
 				ByteObservable.split(0));
 	}
 
+	@Test
+	public void testAggregateHeader() {
+		List<byte[]> list = Observable
+				.from(new byte[] { 'a', 'b', 'c' },
+						new byte[] { 'd', 'e', 'f' })
+				.lift(ByteObservable.split(4)).toList().toBlockingObservable()
+				.single();
+	}
+
 }
