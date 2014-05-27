@@ -102,8 +102,6 @@ public final class ServerObservable {
 				.split(header, "\n")
 				// log line
 				.doOnNext(LOG)
-				// stop when encounter second blank line
-				.takeWhile(lessThanTwoEmptyLines())
 				// aggregate lines as list
 				.toList()
 				// parse the lines as a request
