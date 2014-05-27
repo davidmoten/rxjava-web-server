@@ -48,6 +48,9 @@ public class ByteObservableTest {
 						new byte[] { 'd', 'e', 'f' })
 				.lift(ByteObservable.split(4)).toList().toBlockingObservable()
 				.single();
+		assertEquals(2, list.size());
+		assertEquals("abcd", new String(list.get(0)));
+		assertEquals("ef", new String(list.get(1)));
 	}
 
 }
