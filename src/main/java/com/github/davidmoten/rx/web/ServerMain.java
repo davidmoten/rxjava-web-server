@@ -13,19 +13,26 @@ public class ServerMain {
 
 	public static void main(String[] args) throws InterruptedException {
 
-		ServerObservable.requests(8080).observeOn(Schedulers.io())
+		ServerObservable
+		// listen for requests on port 8080
+				.requests(8080)
+				// serve requests concurrently
+				.observeOn(Schedulers.io())
+				// subscribe
 				.subscribe(new Observer<RequestResponse>() {
 
 					@Override
 					public void onNext(RequestResponse r) {
 						System.out.println(r.request());
-						System.out.println("--body--");
-						List<String> list = StringObservable
-								.decode(r.request().getMessageBody(),
-										Charset.forName("US-ASCII")).toList()
-								.toBlockingObservable().single();
-						for (String s : list)
-							System.out.print(s);
+						if (r.request().method == Method.POST) {
+							System.out.println("--body--");
+							List<String> list = StringObservable
+									.decode(r.request().getMessageBody(),
+											Charset.forName("US-ASCII"))
+									.toList().toBlockingObservable().single();
+							for (String s : list)
+								System.out.print(s);
+						}
 						System.out.println("--end--");
 						try {
 							PrintWriter out = r.response().createWriter();

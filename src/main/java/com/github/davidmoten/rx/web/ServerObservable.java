@@ -89,17 +89,18 @@ public final class ServerObservable {
 
 	static Observable<RequestResponse> toRequestResponse(final Socket socket,
 			InputStream is) {
-		Observable<byte[]> bytes = StringObservable.from(is).cache();
+		Observable<byte[]> bytes = StringObservable.from(is).doOnNext(logBytes)
+				.cache();
 		Observable<byte[]> requestHeaderAndMessageBody = aggregateHeader(bytes,
 				requestTerminator);
 
 		final Observable<String> header = StringObservable.decode(
 				requestHeaderAndMessageBody.first(),
-				Charset.forName("US-ASCII"));
+				Charset.forName("US-ASCII")).doOnNext(LOG);
 
 		Observable<RequestResponse> result = StringObservable
 		// split by line feed
-				.split(header, "\n")
+				.split(header, "\r\n")
 				// log line
 				.doOnNext(LOG)
 				// aggregate lines as list
@@ -196,11 +197,25 @@ public final class ServerObservable {
 		}
 	}
 
-	private static Action1<String> LOG = new Action1<String>() {
+	private static Action1<String> LOG = log("");
+
+	private static Action1<String> log(final String prefix) {
+		return new Action1<String>() {
+
+			@Override
+			public void call(String line) {
+				System.out.println(prefix + " " + line);
+			}
+		};
+	}
+
+	private static final Action1<byte[]> logBytes = new Action1<byte[]>() {
 
 		@Override
-		public void call(String line) {
-			System.out.println(line);
+		public void call(byte[] bytes) {
+			System.out.println("bytes=\n-----------------");
+			System.out.println(new String(bytes));
+			System.out.println("-----------------");
 		}
 	};
 
