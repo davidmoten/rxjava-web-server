@@ -8,7 +8,6 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -89,8 +88,8 @@ public final class ServerObservable {
 
 	static Observable<RequestResponse> toRequestResponse(final Socket socket,
 			InputStream is) {
-		Observable<byte[]> bytes = StringObservable.from(is).doOnNext(logBytes)
-				.cache();
+		Observable<byte[]> bytes = ServerObservable.from(is, 8192).doOnNext(
+				logBytes);
 		Observable<byte[]> requestHeaderAndMessageBody = aggregateHeader(bytes,
 				requestTerminator);
 
@@ -232,16 +231,39 @@ public final class ServerObservable {
 		};
 	}
 
-	private static Func1<List<String>, RequestResponse> toRequestResponse(
-			final Socket socket, final Observable<byte[]> messageBody) {
-		return new Func1<List<String>, RequestResponse>() {
-
+	/**
+	 * Reads from the bytes from a source {@link InputStream} and outputs
+	 * {@link Observable} of {@code byte[]}s
+	 * 
+	 * @param i
+	 *            Source {@link InputStream}
+	 * @param size
+	 *            internal buffer size
+	 * @return the Observable containing read byte arrays from the input
+	 */
+	public static Observable<byte[]> from(final InputStream i, final int size) {
+		return Observable.create(new OnSubscribe<byte[]>() {
 			@Override
-			public RequestResponse call(List<String> lines) {
-				return new RequestResponse(new Request(lines, messageBody),
-						new Response(socket));
+			public void call(Subscriber<? super byte[]> o) {
+				byte[] buffer = new byte[size];
+				try {
+					if (o.isUnsubscribed())
+						return;
+					int n = 0;
+					n = i.read(buffer);
+					while (n != -1 && !o.isUnsubscribed()) {
+						o.onNext(Arrays.copyOf(buffer, n));
+						if (!o.isUnsubscribed())
+							n = i.read(buffer);
+					}
+				} catch (IOException e) {
+					o.onError(e);
+				}
+				if (o.isUnsubscribed())
+					return;
+				o.onCompleted();
 			}
-		};
+		});
 	}
 
 }
