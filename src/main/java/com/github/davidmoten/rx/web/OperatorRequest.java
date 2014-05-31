@@ -64,6 +64,8 @@ class OperatorRequest implements Operator<RequestResponse, byte[]> {
 					} else if (result.request().method.equals(Method.POST)) {
 						child.onNext(result);
 					}
+				} else {
+					messageBody.onNext(bytes);
 				}
 				first = false;
 			}
