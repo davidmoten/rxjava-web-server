@@ -31,14 +31,12 @@ class OperatorRequest implements Operator<RequestResponse, byte[]> {
 
 			@Override
 			public void onCompleted() {
-				// TODO Auto-generated method stub
-
+				child.onCompleted();
 			}
 
 			@Override
 			public void onError(Throwable e) {
-				// TODO Auto-generated method stub
-
+				child.onError(e);
 			}
 
 			@Override

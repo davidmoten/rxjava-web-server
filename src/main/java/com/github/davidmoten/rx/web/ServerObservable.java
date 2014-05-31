@@ -6,10 +6,8 @@ import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import rx.Observable;
 import rx.Observable.OnSubscribe;
@@ -17,9 +15,7 @@ import rx.Observable.Operator;
 import rx.Subscriber;
 import rx.Subscription;
 import rx.functions.Action0;
-import rx.functions.Action1;
 import rx.functions.Func1;
-import rx.observables.StringObservable;
 import rx.subscriptions.CompositeSubscription;
 import rx.subscriptions.Subscriptions;
 
@@ -68,16 +64,15 @@ public final class ServerObservable {
 	}
 
 	public static Observable<RequestResponse> requests(final int port) {
-		return from(port).flatMap(
-				new Func1<Socket, Observable<RequestResponse>>() {
+		return from(port)
+		// to RequestResponse
+				.flatMap(new Func1<Socket, Observable<RequestResponse>>() {
 
 					@Override
 					public Observable<RequestResponse> call(final Socket socket) {
 						System.out.println("\nreading request from " + socket);
 						try {
-							InputStream is = socket.getInputStream();
-							return toRequestResponse(socket, is);
-
+							return requests(socket, socket.getInputStream());
 						} catch (IOException e) {
 							return Observable.error(e);
 						}
@@ -86,32 +81,9 @@ public final class ServerObservable {
 				});
 	}
 
-	static Observable<RequestResponse> toRequestResponse(final Socket socket,
-			InputStream is) {
-		Observable<byte[]> bytes = ServerObservable.from(is, 8192).doOnNext(
-				logBytes);
-		Observable<byte[]> requestHeaderAndMessageBody = aggregateHeader(bytes,
-				requestTerminator);
-
-		final Observable<String> header = StringObservable.decode(
-				requestHeaderAndMessageBody.first(),
-				Charset.forName("US-ASCII")).doOnNext(LOG);
-
-		Observable<RequestResponse> result = StringObservable
-		// split by line feed
-				.split(header, "\r\n")
-				// log line
-				.doOnNext(LOG)
-				// aggregate lines as list
-				.toList()
-				// parse the lines as a request
-				.map(toRequestResponse(socket,
-						requestHeaderAndMessageBody.skip(1)));
-		return result;
+	static Observable<RequestResponse> requests(Socket socket, InputStream is) {
+		return from(is, 8192).lift(new OperatorRequest(socket));
 	}
-
-	private static byte[] requestTerminator = new byte[] { '\r', '\n', '\r',
-			'\n' };
 
 	/**
 	 * All bytes up to the occurrence of pattern are part of the first item
@@ -194,41 +166,6 @@ public final class ServerObservable {
 				child.onError(e);
 			}
 		}
-	}
-
-	private static Action1<String> LOG = log("");
-
-	private static Action1<String> log(final String prefix) {
-		return new Action1<String>() {
-
-			@Override
-			public void call(String line) {
-				System.out.println(prefix + " " + line);
-			}
-		};
-	}
-
-	private static final Action1<byte[]> logBytes = new Action1<byte[]>() {
-
-		@Override
-		public void call(byte[] bytes) {
-			System.out.println("bytes=\n-----------------");
-			System.out.println(new String(bytes));
-			System.out.println("-----------------");
-		}
-	};
-
-	private static Func1<String, Boolean> lessThanTwoEmptyLines() {
-		return new Func1<String, Boolean>() {
-			AtomicInteger count = new AtomicInteger();
-
-			@Override
-			public Boolean call(String line) {
-				if (line.trim().length() == 0)
-					count.incrementAndGet();
-				return count.get() < 1;
-			}
-		};
 	}
 
 	/**

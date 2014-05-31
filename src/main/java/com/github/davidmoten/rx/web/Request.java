@@ -1,10 +1,7 @@
 package com.github.davidmoten.rx.web;
 
 import static com.github.davidmoten.rx.web.ByteObservable.split;
-import static rx.observables.StringObservable.decode;
-import static rx.observables.StringObservable.split;
 
-import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,10 +49,6 @@ public class Request {
 			int length = Integer.parseInt(headers.get(CONTENT_LENGTH));
 			System.out.println("------------using length!!!!!!!!!!!!!!!!!");
 			this.messageBody = messageBody.lift(split(length)).first();
-			List<String> list = split(
-					decode(messageBody, Charset.forName("UTF-8")), "\n")
-					.toList().toBlockingObservable().single();
-			System.out.println("messageBody=" + list);
 		} else
 			this.messageBody = Observable.empty();
 	}
