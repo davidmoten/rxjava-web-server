@@ -9,11 +9,12 @@ import rx.Observable.Operator;
 import rx.Observer;
 import rx.Subscriber;
 import rx.functions.Func1;
+import rx.observables.GroupedObservable;
 import rx.observables.StringObservable;
 import rx.observers.Subscribers;
 import rx.subjects.PublishSubject;
 
-class OperatorRequest implements Operator<Conversation, byte[]> {
+class OperatorRequest implements Operator<Conversation, GroupedObservable<Boolean,byte[]>> {
 
 	private final Socket socket;
 
@@ -22,7 +23,7 @@ class OperatorRequest implements Operator<Conversation, byte[]> {
 	}
 
 	@Override
-	public Subscriber<? super byte[]> call(
+	public  Subscriber<GroupedObservable<Boolean,byte[]>> call(
 			final Subscriber<? super Conversation> child) {
 		Subscriber<byte[]> parent = Subscribers.from(new Observer<byte[]>() {
 
