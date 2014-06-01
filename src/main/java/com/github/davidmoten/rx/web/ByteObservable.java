@@ -29,7 +29,8 @@ public class ByteObservable {
 							child.onNext(buffer.toByteArray());
 							buffer.reset();
 						}
-						child.onCompleted();
+						if (!isUnsubscribed())
+							child.onCompleted();
 					}
 
 					@Override

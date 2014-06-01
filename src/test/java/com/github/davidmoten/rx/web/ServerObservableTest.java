@@ -43,7 +43,7 @@ public class ServerObservableTest {
 		InputStream is = ServerObservableTest.class
 				.getResourceAsStream("/request-post.txt");
 		assertNotNull(is);
-		RequestResponse o = ServerObservable.requests(null, is).first()
+		Conversation o = ServerObservable.requests(null, is).first()
 				.toBlockingObservable().single();
 		System.out.println(o);
 	}
@@ -57,7 +57,7 @@ public class ServerObservableTest {
 		ByteArrayInputStream is = new ByteArrayInputStream(Arrays.copyOf(bytes,
 				100000));
 
-		RequestResponse o = ServerObservable.requests(null, is).first()
+		Conversation o = ServerObservable.requests(null, is).first()
 				.toBlockingObservable().single();
 		System.out.println(new String(o.request().getMessageBody().toList()
 				.toBlockingObservable().single().get(0)));

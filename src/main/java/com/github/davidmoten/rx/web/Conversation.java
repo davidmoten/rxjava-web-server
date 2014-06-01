@@ -1,10 +1,10 @@
 package com.github.davidmoten.rx.web;
 
-public class RequestResponse {
+public class Conversation {
 	private final Request request;
 	private final Response response;
 
-	public RequestResponse(Request request, Response response) {
+	public Conversation(Request request, Response response) {
 		this.request = request;
 		this.response = response;
 	}

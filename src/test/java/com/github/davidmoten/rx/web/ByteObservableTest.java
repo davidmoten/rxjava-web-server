@@ -11,7 +11,7 @@ import rx.Observable;
 public class ByteObservableTest {
 
 	@Test
-	public void testFirstAcrossTwo() {
+	public void testSplitAcrossTwo() {
 		List<byte[]> list = Observable
 				.from(new byte[] { 'a', 'b', 'c' },
 						new byte[] { 'd', 'e', 'f' })
@@ -23,7 +23,7 @@ public class ByteObservableTest {
 	}
 
 	@Test
-	public void testFirstWithinOne() {
+	public void testSplitWithinOne() {
 		List<byte[]> list = Observable
 				.from(new byte[] { 'a', 'b', 'c' },
 						new byte[] { 'd', 'e', 'f' })
@@ -36,21 +36,9 @@ public class ByteObservableTest {
 	}
 
 	@Test(expected = IllegalArgumentException.class)
-	public void testFirstZeroBytes() {
+	public void testSplitZeroBytes() {
 		Observable.from(new byte[] { 'a', 'b', 'c' }).lift(
 				ByteObservable.split(0));
-	}
-
-	@Test
-	public void testAggregateHeader() {
-		List<byte[]> list = Observable
-				.from(new byte[] { 'a', 'b', 'c' },
-						new byte[] { 'd', 'e', 'f' })
-				.lift(ByteObservable.split(4)).toList().toBlockingObservable()
-				.single();
-		assertEquals(2, list.size());
-		assertEquals("abcd", new String(list.get(0)));
-		assertEquals("ef", new String(list.get(1)));
 	}
 
 }

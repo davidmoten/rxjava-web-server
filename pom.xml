@@ -6,7 +6,7 @@
     <version>0.0.1-SNAPSHOT</version>
     <name>${project.artifactId}</name>
     <properties>
-        <rxjava.version>0.18.3</rxjava.version>
+        <rxjava.version>0.18.4</rxjava.version>
         <maven.compiler.target>1.6</maven.compiler.target>
     </properties>
     <dependencies>

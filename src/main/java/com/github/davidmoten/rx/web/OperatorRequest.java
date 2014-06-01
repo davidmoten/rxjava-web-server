@@ -13,7 +13,7 @@ import rx.observables.StringObservable;
 import rx.observers.Subscribers;
 import rx.subjects.PublishSubject;
 
-class OperatorRequest implements Operator<RequestResponse, byte[]> {
+class OperatorRequest implements Operator<Conversation, byte[]> {
 
 	private final Socket socket;
 
@@ -23,7 +23,7 @@ class OperatorRequest implements Operator<RequestResponse, byte[]> {
 
 	@Override
 	public Subscriber<? super byte[]> call(
-			final Subscriber<? super RequestResponse> child) {
+			final Subscriber<? super Conversation> child) {
 		Subscriber<byte[]> parent = Subscribers.from(new Observer<byte[]>() {
 
 			boolean first = true;
@@ -45,7 +45,7 @@ class OperatorRequest implements Operator<RequestResponse, byte[]> {
 					final Observable<String> header = StringObservable.decode(
 							Observable.just(bytes), Charset.forName("US-ASCII"));
 
-					RequestResponse result = StringObservable
+					Conversation result = StringObservable
 							// split by line feed
 							.split(header, "\r\n")
 							// log line
@@ -72,13 +72,13 @@ class OperatorRequest implements Operator<RequestResponse, byte[]> {
 		return parent;
 	}
 
-	private static Func1<List<String>, RequestResponse> toRequestResponse(
+	private static Func1<List<String>, Conversation> toRequestResponse(
 			final Socket socket, final Observable<byte[]> messageBody) {
-		return new Func1<List<String>, RequestResponse>() {
+		return new Func1<List<String>, Conversation>() {
 
 			@Override
-			public RequestResponse call(List<String> lines) {
-				return new RequestResponse(new Request(lines, messageBody),
+			public Conversation call(List<String> lines) {
+				return new Conversation(new Request(lines, messageBody),
 						new Response(socket));
 			}
 		};

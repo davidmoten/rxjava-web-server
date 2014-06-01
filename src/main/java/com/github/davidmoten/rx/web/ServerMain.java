@@ -19,10 +19,10 @@ public class ServerMain {
 				// serve requests concurrently
 				.observeOn(Schedulers.io())
 				// subscribe
-				.subscribe(new Observer<RequestResponse>() {
+				.subscribe(new Observer<Conversation>() {
 
 					@Override
-					public void onNext(RequestResponse r) {
+					public void onNext(Conversation r) {
 						System.out.println(r.request());
 						if (r.request().method == Method.POST) {
 							System.out.println("--body--");
