@@ -20,7 +20,8 @@ public class ServerMain {
 
                     @Override
                     public void onNext(Conversation r) {
-                        System.out.println(r.request());
+                        System.out.println("request=" + r.request());
+                        System.out.println(r.request().getMethodLine().toBlockingObservable().single().getMethod());
                         try {
                             PrintWriter out = r.response().createWriter();
                             out.print("HTTP/1.1 200 OK\r\n");
